@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
-  
+
 jobs:
   test:
 
@@ -20,7 +20,11 @@ jobs:
 
       - name: Install dependencies
         working-directory: src
-        run: composer install
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Dump autoload
+        working-directory: src
+        run: composer dump-autoload
 
       - name: Copy env
         working-directory: src
