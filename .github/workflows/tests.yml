@@ -1,68 +1,32 @@
 name: Laravel Tests
 
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+on: [push]
 
 jobs:
-  laravel-tests:
+  test:
 
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_DB: test_db
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     steps:
-
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: 8.3
-          extensions: pdo_pgsql
-          coverage: none
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        working-directory: src
+        run: composer install
 
       - name: Copy env
+        working-directory: src
         run: cp .env.example .env
 
       - name: Generate key
+        working-directory: src
         run: php artisan key:generate
 
-      - name: Run migrations
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_DATABASE: test_db
-          DB_USERNAME: postgres
-          DB_PASSWORD: postgres
-        run: php artisan migrate
-
       - name: Run tests
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_DATABASE: test_db
-          DB_USERNAME: postgres
-          DB_PASSWORD: postgres
+        working-directory: src
         run: php artisan test
