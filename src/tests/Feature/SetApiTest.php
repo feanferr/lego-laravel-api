@@ -18,7 +18,7 @@ class SetApiTest extends TestCase
     {
         Set::factory()->count(5)->create();
 
-        $response = $this->getJson('/api/sets');
+        $response = $this->getJson('/api/v1/sets');
 
         $response->assertStatus(200)
              ->assertJsonCount(5, 'data');    
@@ -33,7 +33,7 @@ class SetApiTest extends TestCase
         "num_parts" => 4016
     ];
 
-    $response = $this->postJson('/api/sets', $data);
+    $response = $this->postJson('/api/v1/sets', $data);
 
     $response->assertStatus(201)
              ->assertJsonFragment([

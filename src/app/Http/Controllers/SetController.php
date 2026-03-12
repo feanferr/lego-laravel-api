@@ -6,27 +6,62 @@ use App\Models\Set;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreSetRequest;
 use App\Http\Resources\SetResource;
+use Illuminate\Support\Facades\Cache;
 
 
 class SetController extends Controller
 {
     /**
-     * Display a listing of the resource.
-     */
-    public function index()
+     * Listar sets
+     *
+     * Retorna uma lista paginada de sets, com suporte a filtros, busca e ordenação.
+     *
+     * @queryParam theme string Filtra por tema. Example: Star Wars
+     * @queryParam year integer Filtra por ano. Example: 2019
+     * @queryParam search string Busca por nome. Example: falcon
+     * @queryParam sort_by string Campo para ordenação. Example: year
+     * @queryParam sort_direction string Direção da ordenação. Example: desc
+     * @queryParam page integer Página atual. Example: 1
+     */    
+    public function index(Request $request)
     {
-        return SetResource::collection(Set::all());
-    }    
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
+        $cacheKey = 'sets:' . md5($request->fullUrl());
 
+        $sets = Cache::remember($cacheKey, 60, function () use ($request) {
+            $query = Set::query();
+
+            if ($request->filled('theme')) {
+                $query->where('theme', 'like', '%' . $request->theme . '%');
+            }
+
+            if ($request->filled('year')) {
+                $query->where('year', $request->year);
+            }
+
+            if ($request->filled('search')) {
+                $query->where('name', 'like', '%' . $request->search . '%');
+            }
+
+            $sortBy = $request->get('sort_by', 'id');
+            $sortDirection = $request->get('sort_direction', 'asc');
+
+            $allowedSorts = ['id', 'name', 'year', 'num_parts'];
+
+            if (! in_array($sortBy, $allowedSorts)) {
+                $sortBy = 'id';
+            }
+
+            if (! in_array($sortDirection, ['asc', 'desc'])) {
+                $sortDirection = 'asc';
+            }
+
+            return $query->orderBy($sortBy, $sortDirection)->paginate(10);
+        });
+
+        return SetResource::collection($sets);
+    }
     /**
-     * Store a newly created resource in storage.
+     * Criar um novo set.
      */
     public function store(StoreSetRequest $request)
     {
@@ -34,41 +69,22 @@ class SetController extends Controller
 
         return response()->json($set, 201);
     }
-    /**
-     * Display the specified resource.
-     */
+
     public function show(Set $set)
     {
-        $set = Set::findOrFail($id);
+        return new SetResource($set);
+    }
+
+    public function update(StoreSetRequest $request, Set $set)
+    {
+        $set->update($request->validated());
 
         return new SetResource($set);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Set $set)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Set $set)
-    {
-        $set = Set::findOrFail($id);
-        $set->update($request->all());
-
-        return $set;
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Set $set)
     {
-        Set::destroy($id);
+        $set->delete();
 
         return response()->json(null, 204);
     }
